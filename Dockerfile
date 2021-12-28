@@ -103,8 +103,8 @@ RUN cd nginx-${NGINX_VERSION} && \
   --sbin-path=/usr/sbin/nginx \
   --modules-path=/usr/lib/nginx/modules \
   --conf-path=/etc/nginx/nginx.conf \
-  --error-log-path=/var/log/nginx/error.log \
-  --http-log-path=/var/log/nginx/access.log \
+  --error-log-path=/dev/stderr \
+  --http-log-path=/proc/self/fd/2 \
   --pid-path=/var/run/nginx.pid \
   --lock-path=/var/run/nginx.lock \
   --http-client-body-temp-path=/var/cache/nginx/client_temp \
@@ -125,11 +125,17 @@ RUN cd nginx-${NGINX_VERSION} && \
 
 # create directories in the build image as mkdir won't exist in the distroless image
 RUN mkdir -p /var/cache/nginx/ && \
+  mkdir -p /var/cache/nginx/client_temp && \
+  mkdir -p /var/cache/nginx/proxy_temp && \
+  mkdir -p /var/cache/nginx/fastcgi_temp && \
+  mkdir -p /var/cache/nginx/uwsgi_temp && \
+  mkdir -p /var/cache/nginx/scgi_temp && \
   mkdir -p /var/lib/nginx && \
   mkdir -p /etc/nginx/conf.d/ && \
   mkdir -p /etc/nginx/modsec/ && \
   mkdir -p /nginx/lib/ && \
-  mkdir -p /nginx/usr/lib/
+  mkdir -p /nginx/usr/lib/ && \
+  touch /var/run/nginx.pid
 
 # copy in the default configuration
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -147,7 +153,7 @@ RUN cp -p /lib/x86_64-linux-gnu/libnss_compat.so.2 /nginx/lib/ && \
   cp -p /lib/x86_64-linux-gnu/libnss_files.so.2 /nginx/lib/
 
 # use the static distroless image for our runtime image
-FROM gcr.io/distroless/static
+FROM gcr.io/distroless/static:nonroot
 
 ARG NGINX_VERSION
 ARG TZ
@@ -156,9 +162,8 @@ LABEL nginx.version=${NGINX_VERSION}
 
 ENV TZ=${TZ}
 
-COPY --from=build /var/cache/nginx /var/cache/nginx
-COPY --from=build /var/log /var/log
-COPY --from=build /var/run /var/run
+COPY --from=build --chown=nonroot /var/cache/nginx /var/cache/nginx
+COPY --from=build --chown=nonroot /var/run/nginx.pid /var/run/nginx.pid
 
 COPY --from=build /etc/nginx /etc/nginx
 
@@ -168,7 +173,6 @@ COPY --from=build /lib64/ld-linux-x86-64.so.2 /lib64/
 
 COPY --from=build /nginx/lib/ /lib/x86_64-linux-gnu/
 COPY --from=build /nginx/usr/lib/ /usr/lib/x86_64-linux-gnu/
-
 
 EXPOSE 80/tcp
 EXPOSE 443/tcp

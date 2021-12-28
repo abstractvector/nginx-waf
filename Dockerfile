@@ -1,13 +1,21 @@
+ARG DEBIAN_VERSION=11
+
 ARG NGINX_VERSION=1.20.2
+
+ARG HEADERS_MORE_VERSION=0.33
+
 ARG MODSECURITY_VERSION=3.0.6
 ARG MODSECURITY_NGINX_VERSION=1.0.2
-ARG DEBIAN_VERSION=11
+
 ARG TZ="UTC"
 
 # use Debian as the base image to build nginx
 FROM debian:${DEBIAN_VERSION}-slim AS build
 
 ARG NGINX_VERSION
+
+ARG HEADERS_MORE_VERSION
+
 ARG MODSECURITY_VERSION
 ARG MODSECURITY_NGINX_VERSION
 
@@ -19,6 +27,7 @@ ARG NGINX_COMPILE_ARGS="\
   --with-file-aio \
   --with-threads \
   --with-http_auth_request_module \
+  --with-http_geoip_module \
   --with-http_gunzip_module \
   --with-http_realip_module \
   --with-http_ssl_module \
@@ -78,6 +87,11 @@ RUN wget https://github.com/SpiderLabs/ModSecurity-nginx/releases/download/v${MO
   tar xf modsecurity-nginx-v${MODSECURITY_NGINX_VERSION}.tar.gz && \
   mv modsecurity-nginx-v${MODSECURITY_NGINX_VERSION} modsecurity-nginx
 
+# download and extract ngx_headers_more
+RUN wget https://github.com/openresty/headers-more-nginx-module/archive/refs/tags/v${HEADERS_MORE_VERSION}.tar.gz && \
+  tar xf v${HEADERS_MORE_VERSION}.tar.gz && \
+  mv headers-more-nginx-module-${HEADERS_MORE_VERSION} headers-more-nginx
+
 # download nginx source
 RUN wget http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz && \
   tar xf nginx-${NGINX_VERSION}.tar.gz
@@ -101,6 +115,7 @@ RUN cd nginx-${NGINX_VERSION} && \
   --user=nonroot \
   --group=nonroot \
   --add-module=../modsecurity-nginx \
+  --add-module=../headers-more-nginx \
   ${NGINX_COMPILE_ARGS} \
   --with-cc-opt="${NGINX_CC_OPT}" \
   --with-ld-opt="${NGINX_LD_OPT}" \

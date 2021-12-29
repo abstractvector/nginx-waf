@@ -7,6 +7,8 @@ ARG HEADERS_MORE_VERSION=0.33
 ARG MODSECURITY_VERSION=3.0.6
 ARG MODSECURITY_NGINX_VERSION=1.0.2
 
+ARG OWASP_CRS_VERSION=3.3.2
+
 ARG TZ="UTC"
 
 # use Debian as the base image to build nginx
@@ -18,6 +20,8 @@ ARG HEADERS_MORE_VERSION
 
 ARG MODSECURITY_VERSION
 ARG MODSECURITY_NGINX_VERSION
+
+ARG OWASP_CRS_VERSION
 
 ARG NGINX_CC_OPT="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
 ARG NGINX_LD_OPT="-Wl,-z,relro -Wl,-z,now -Wl,--as-needed -pie"
@@ -132,15 +136,22 @@ RUN mkdir -p /var/cache/nginx/ && \
   mkdir -p /var/cache/nginx/scgi_temp && \
   mkdir -p /var/lib/nginx && \
   mkdir -p /etc/nginx/conf.d/ && \
-  mkdir -p /etc/nginx/modsec/ && \
+  mkdir -p /etc/nginx/modsecurity/ && \
+  mkdir -p /etc/nginx/crs/ && \
   mkdir -p /nginx/lib/ && \
   mkdir -p /nginx/usr/lib/ && \
   touch /var/run/nginx.pid
 
 # copy in the default configuration
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY modsecurity/*.conf /etc/nginx/modsec/
-RUN cp -pr modsecurity-v${MODSECURITY_VERSION}/unicode.mapping /etc/nginx/modsec
+COPY modsecurity/*.conf /etc/nginx/modsecurity/
+
+# configure modsecurity and the owasp core rule set (crs)
+RUN cp -pr modsecurity-v${MODSECURITY_VERSION}/unicode.mapping /etc/nginx/modsecurity && \
+  wget https://github.com/coreruleset/coreruleset/archive/refs/tags/v${OWASP_CRS_VERSION}.tar.gz && \
+  tar xf v${OWASP_CRS_VERSION}.tar.gz && \
+  mv coreruleset-${OWASP_CRS_VERSION}/crs-setup.conf.example /etc/nginx/crs/crs-setup.conf && \
+  mv coreruleset-${OWASP_CRS_VERSION}/rules/ /etc/nginx/crs/rules/
 
 # copy the dependencies into a single folder so they're easy to copy to the runtime image later
 RUN ldd /usr/sbin/nginx | grep '=>' | cut -d' ' -f 3 | grep -e '^/lib' | xargs -I{} cp -p {} /nginx/lib/ && \

@@ -2,26 +2,17 @@ ARG DEBIAN_VERSION=11
 
 ARG NGINX_VERSION=1.20.2
 
+# use Debian as the base image to build nginx
+FROM debian:${DEBIAN_VERSION}-slim AS build
+
+ARG NGINX_VERSION
+
 ARG HEADERS_MORE_VERSION=0.33
 
 ARG MODSECURITY_VERSION=3.0.6
 ARG MODSECURITY_NGINX_VERSION=1.0.2
 
 ARG OWASP_CRS_VERSION=3.3.2
-
-ARG TZ="UTC"
-
-# use Debian as the base image to build nginx
-FROM debian:${DEBIAN_VERSION}-slim AS build
-
-ARG NGINX_VERSION
-
-ARG HEADERS_MORE_VERSION
-
-ARG MODSECURITY_VERSION
-ARG MODSECURITY_NGINX_VERSION
-
-ARG OWASP_CRS_VERSION
 
 ARG NGINX_CC_OPT="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
 ARG NGINX_LD_OPT="-Wl,-z,relro -Wl,-z,now -Wl,--as-needed -pie"
@@ -167,7 +158,7 @@ RUN cp -p /lib/x86_64-linux-gnu/libnss_compat.so.2 /nginx/lib/ && \
 FROM gcr.io/distroless/static:nonroot
 
 ARG NGINX_VERSION
-ARG TZ
+ARG TZ="UTC"
 
 LABEL nginx.version=${NGINX_VERSION}
 

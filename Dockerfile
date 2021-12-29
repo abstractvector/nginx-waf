@@ -158,11 +158,10 @@ RUN cp -p /lib/x86_64-linux-gnu/libnss_compat.so.2 /nginx/lib/ && \
 FROM gcr.io/distroless/static:nonroot
 
 ARG NGINX_VERSION
-ARG TZ="UTC"
 
 LABEL nginx.version=${NGINX_VERSION}
 
-ENV TZ=${TZ}
+ENV TZ="UTC"
 
 COPY --from=build --chown=nonroot /var/cache/nginx /var/cache/nginx
 COPY --from=build --chown=nonroot /var/run/nginx.pid /var/run/nginx.pid
